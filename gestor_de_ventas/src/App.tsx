@@ -6,6 +6,8 @@ import { ProductFormPage } from './pages/ProductFormPage';
 import { MarcasPage } from './pages/MarcasPage';
 import { LineasPage } from './pages/LineasPage';
 import { MainLayout } from './layouts/MainLayout';
+// --- 1. Importa la nueva página ---
+import { VentaFormPage } from './pages/VentaFormPage';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         <Route path="marcas" element={<MarcasPage />} />
         <Route path="lineas" element={<LineasPage />} />
         <Route path="productos/nuevo" element={<ProductFormPage />} />
+        {/* --- 2. Añade la nueva ruta de ventas --- */}
+        <Route path="ventas/nueva" element={<VentaFormPage />} />
       </Route>
     </Routes>
   );

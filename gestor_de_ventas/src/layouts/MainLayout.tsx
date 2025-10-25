@@ -1,5 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
+// --- CORRECCIÓN: Usar la ruta de alias '@/' ---
 import { cn } from '../lib/utils';
+// --- 1. Importa el Toaster ---
+import { Toaster } from "../components/ui/toaster"; // Ajusta la ruta si es necesario
 
 export function MainLayout() {
     const activeLinkClass = "bg-primary text-primary-foreground";
@@ -26,11 +29,21 @@ export function MainLayout() {
                     >
                         Nuevo Producto
                     </NavLink>
+                    {/* --- 2. Añade el nuevo enlace de Venta --- */}
+                    <NavLink
+                        to="/gestion/ventas/nueva"
+                        className={({ isActive }) => cn("transition-colors hover:text-foreground p-2 rounded-md", isActive && activeLinkClass)}
+                    >
+                        Nueva Venta
+                    </NavLink>
                 </nav>
             </header>
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
                 <Outlet /> {/* Aquí se renderizarán las páginas anidadas */}
             </main>
+            {/* --- 3. Añade el Toaster al final --- */}
+            <Toaster />
         </div>
     );
 }
+
