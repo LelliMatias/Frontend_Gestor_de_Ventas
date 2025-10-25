@@ -24,10 +24,16 @@ export function MainLayout() {
                         Líneas
                     </NavLink>
                     <NavLink
-                        to="/gestion/productos/nuevo"
+                        to="/gestion/productos"
                         className={({ isActive }) => cn("transition-colors hover:text-foreground p-2 rounded-md", isActive && activeLinkClass)}
                     >
-                        Nuevo Producto
+                        Productos
+                    </NavLink>
+                    <NavLink
+                        to="/gestion/proveedores"
+                        className={({ isActive }) => cn("transition-colors hover:text-foreground", isActive && activeLinkClass)}
+                    >
+                        Proveedores
                     </NavLink>
                     {/* --- 2. Añade el nuevo enlace de Venta --- */}
                     <NavLink
