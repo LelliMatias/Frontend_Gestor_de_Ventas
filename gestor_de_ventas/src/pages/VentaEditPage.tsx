@@ -1,24 +1,25 @@
 import { useState, useEffect, useMemo } from 'react';
-import api from '../services/api'; 
+import api from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableRow } from '../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { useToast } from "../hooks/use-toast";
 import { Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Textarea } from '../components/ui/textarea'; // Importa Textarea
 
-// Interfaces (Puedes moverlas a un archivo @/types)
+
+// (Reutiliza las interfaces Producto y DetalleVentaItem)
 interface Producto {
     id: number;
     nombre: string;
-    precioUnitario: number; // Tu backend usa camelCase en la entidad
+    precioUnitario: number; 
     stockActual: number;
 }
-
 interface DetalleVentaItem {
     productoId: number;
     nombre: string;
@@ -27,42 +28,73 @@ interface DetalleVentaItem {
     subtotal: number;
 }
 
-export function VentaFormPage() {
-    const { toast } = useToast();
+export function VentaEditPage() {
+    const { id: ventaId } = useParams(); // Obtiene el ID de la URL
     const navigate = useNavigate();
+    const { toast } = useToast();
     
+    // Estados
     const [productos, setProductos] = useState<Producto[]>([]);
     const [detalles, setDetalles] = useState<DetalleVentaItem[]>([]);
-    
+    const [motivo, setMotivo] = useState<string>(''); // ¡Nuevo! Para el historial
+
+    // Estados de inputs
     const [selectedProductId, setSelectedProductId] = useState<string>('');
     const [cantidad, setCantidad] = useState<number>(1);
 
     const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Cargar productos al montar
+    // Cargar productos Y la venta existente
     useEffect(() => {
-        const fetchProductos = async () => {
+        const fetchVentaData = async () => {
+            if (!ventaId) return;
+            setIsLoading(true);
             try {
-                const res = await api.get('/productos');
-                // Asumimos que la API devuelve productos con stockActual y precioUnitario
-                setProductos(res.data);
+                // 1. Cargar productos (activos)
+                const resProductos = await api.get('/productos');
+                setProductos(resProductos.data);
+
+                // 2. Cargar la venta específica
+                const resVenta = await api.get(`/venta/${ventaId}`);
+                const venta = resVenta.data;
+                
+                if (venta.fecha_eliminacion) {
+                    setError("No se puede editar una venta cancelada. Restáurala primero.");
+                    setIsSubmitting(true); // Bloquea el botón de guardar
+                    return;
+                }
+
+                // 3. Poblar el "carrito" (detalles) con los datos de la venta
+                const detallesCargados = venta.detalles.map((d: any) => ({
+                    productoId: d.producto.id,
+                    nombre: d.producto.nombre,
+                    cantidad: d.cantidad,
+                    precio_unitario: parseFloat(d.precio_unitario),
+                    subtotal: parseFloat(d.subtotal),
+                }));
+                setDetalles(detallesCargados);
+                
             } catch (err) {
-                setError("No se pudieron cargar los productos.");
+                setError("No se pudieron cargar los datos de la venta.");
+            } finally {
+                setIsLoading(false);
             }
         };
-        fetchProductos();
-    }, []);
+        fetchVentaData();
+    }, [ventaId]);
 
+    // --- Lógica del Carrito (idéntica a VentaFormPage) ---
     const total = useMemo(() => {
         return detalles.reduce((acc, item) => acc + item.subtotal, 0);
     }, [detalles]);
 
     const handleAddDetalle = () => {
         setError(null);
-        if (!selectedProductId || cantidad <= 0) return;
-
         const numCantidad = Number(cantidad);
+        if (!selectedProductId || numCantidad <= 0) return;
+        
         const producto = productos.find(p => p.id === Number(selectedProductId));
         if (!producto) return;
 
@@ -70,22 +102,18 @@ export function VentaFormPage() {
         if (producto.stockActual <= 10) {
             toast({
                 title: "Alerta de Stock Bajo",
-                description: `Quedan ${producto.stockActual} unidades de "${producto.nombre}".`,
-                variant: "default",
+                description: `Quedan ${producto.stockActual} unidades.`,
             });
         }
-        // --- FIN DEL HACK ---
         
         const existing = detalles.find(d => d.productoId === producto.id);
         if (existing) {
-            // Actualizar cantidad
             setDetalles(detalles.map(d => 
                 d.productoId === producto.id
                     ? { ...d, cantidad: d.cantidad + numCantidad, subtotal: (d.cantidad + numCantidad) * d.precio_unitario }
                     : d
             ));
         } else {
-            // Agregar nuevo item
             setDetalles([...detalles, {
                 productoId: producto.id,
                 nombre: producto.nombre,
@@ -101,57 +129,74 @@ export function VentaFormPage() {
     const handleRemoveDetalle = (productoId: number) => {
         setDetalles(detalles.filter(d => d.productoId !== productoId));
     };
+    // --- Fin Lógica del Carrito ---
 
-    const handleSubmitVenta = async (e: React.FormEvent) => {
+
+    const handleSubmitEdicion = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
         if (detalles.length === 0) {
-            setError("La venta no tiene productos.");
+            setError("La venta no puede quedar sin productos.");
+            return;
+        }
+        if (!motivo.trim()) {
+            setError("Debes ingresar un motivo para la edición (requerido para el historial).");
             return;
         }
 
-        setIsLoading(true);
+        setIsSubmitting(true);
 
-        // DTO que espera POST /venta
-        const createVentaDto = {
+        // DTO para el endpoint PATCH /venta/:id/detalles
+        const updateVentaDetallesDto = {
             detalles: detalles.map(d => ({
                 id_producto: d.productoId,
                 cantidad: d.cantidad,
             })),
+            motivo: motivo,
         };
 
         try {
-            await api.post('/venta', createVentaDto);
+            await api.patch(`/venta/${ventaId}/detalles`, updateVentaDetallesDto);
             
             toast({
                 title: "¡Éxito!",
-                description: "Venta registrada correctamente.",
+                description: "Venta actualizada correctamente. El stock ha sido ajustado.",
             });
+            navigate('/gestion/ventas'); // Volver a la lista
             
-            navigate('/gestion/ventas'); // Redirige a la lista
-            
-        } catch (err: any) {
-            // Captura el error real del backend (ej. "Stock insuficiente")
-            const errorMsg = err.response?.data?.message || "No se pudo registrar la venta.";
+        // --- INICIO DE LA CORRECCIÓN ---
+        } catch (err: any) { // Se borró el "Venta" y se añadieron llaves
+            const errorMsg = err.response?.data?.message || "No se pudo actualizar la venta.";
             setError(errorMsg);
             toast({
-                title: "Error al registrar la venta",
+                title: "Error al actualizar",
                 description: errorMsg,
                 variant: "destructive",
             });
+        // --- FIN DE LA CORRECCIÓN ---
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     };
 
+    if (isLoading) return <div className="p-4">Cargando datos de la venta...</div>;
+
     return (
-        <form onSubmit={handleSubmitVenta}>
+        <form onSubmit={handleSubmitEdicion}>
+            <div className="flex justify-between items-center mb-4">
+                 <h1 className="text-2xl font-bold">Editar Venta #{ventaId}</h1>
+                 <Button type="button" variant="outline" asChild>
+                    <Link to="/gestion/ventas">Volver a la lista</Link>
+                 </Button>
+            </div>
+            
             <div className="grid md:grid-cols-3 gap-8">
-                {/* Columna 1: Agregar Productos */}
+                {/* Columna 1: Agregar Productos (idéntica) */}
                 <Card className="md:col-span-1 h-fit">
-                    <CardHeader><CardTitle>Agregar Productos</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Agregar/Quitar Productos</CardTitle></CardHeader>
                     <CardContent className="grid gap-4">
-                        <div className="grid gap-2">
+                         <div className="grid gap-2">
                             <Label htmlFor="producto">Producto</Label>
                             <Select value={selectedProductId} onValueChange={setSelectedProductId}>
                                 <SelectTrigger id="producto">
@@ -177,17 +222,17 @@ export function VentaFormPage() {
                             />
                         </div>
                         <Button type="button" onClick={handleAddDetalle}>
-                            Agregar a la Venta
+                            Añadir/Actualizar
                         </Button>
                     </CardContent>
                 </Card>
 
-                {/* Columna 2: Resumen de Venta */}
+                {/* Columna 2: Resumen de Venta (con campo Motivo) */}
                 <Card className="md:col-span-2">
                     <CardHeader><CardTitle>Resumen de Venta</CardTitle></CardHeader>
                     <CardContent>
                         <Table>
-                            <TableHeader>
+                            <TableHead>
                                 <TableRow>
                                     <TableHead>Producto</TableHead>
                                     <TableHead>Cantidad</TableHead>
@@ -195,7 +240,7 @@ export function VentaFormPage() {
                                     <TableHead>Subtotal</TableHead>
                                     <TableHead>Acción</TableHead>
                                 </TableRow>
-                            </TableHeader>
+                            </TableHead>
                             <TableBody>
                                 {detalles.length === 0 && (
                                 <TableRow>
@@ -219,6 +264,17 @@ export function VentaFormPage() {
                         </Table>
                     </CardContent>
                     <CardFooter className="flex flex-col items-start gap-4">
+                         {/* --- CAMPO MOTIVO (NUEVO) --- */}
+                         <div className="grid gap-2 w-full">
+                            <Label htmlFor="motivo">Motivo de la Edición (Requerido)</Label>
+                            <Textarea
+                                id="motivo"
+                                placeholder="Ej: Cliente cambió 2u de Producto A por 1u de Producto B..."
+                                value={motivo}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMotivo(e.target.value)}
+                            />
+                        </div>
+
                         {error && (
                             <Alert variant="destructive" className="w-full">
                                 <AlertTitle>Error</AlertTitle>
@@ -226,9 +282,9 @@ export function VentaFormPage() {
                             </Alert>
                         )}
                         <div className="flex justify-between items-center w-full">
-                            <h3 className="text-xl font-bold">Total: ${total.toFixed(2)}</h3>
-                            <Button type="submit" size="lg" disabled={isLoading}>
-                                {isLoading ? "Registrando..." : "Registrar Venta"}
+                            <h3 className="text-xl font-bold">Nuevo Total: ${total.toFixed(2)}</h3>
+                            <Button type="submit" size="lg" disabled={isSubmitting}>
+                                {isSubmitting ? "Guardando Cambios..." : "Guardar Cambios"}
                             </Button>
                         </div>
                     </CardFooter>
