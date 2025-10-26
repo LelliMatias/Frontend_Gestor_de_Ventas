@@ -20,12 +20,27 @@ export function LoginPage() {
         setError('');
         try {
             const { data } = await api.post('/auth/login', { email, contraseña });
-
-            login(data.token, data.user);
-
+            login(data.access_token, data.user);
             navigate('/gestion/productos/nuevo');
-        } catch (err) {
-            setError('Credenciales incorrectas. Inténtalo de nuevo.');
+
+        } catch (err: any) { // El 'any' aquí nos permite inspeccionar el error
+
+            // --- INICIO DE LA MODIFICACIÓN ---
+
+            // 1. Verificamos si el error viene de Axios (err.response)
+            //    y si NestJS nos envió un JSON con un 'message'
+            if (err.response && err.response.data && err.response.data.message) {
+                
+                // 2. ¡Aquí está la magia!
+                //    Mostramos el mensaje específico del backend ("Usuario no encontrado" o "Contraseña incorrecta")
+                setError(err.response.data.message);
+
+            } else {
+                // 3. Si no, es un error de red o algo más (ej. el servidor está caído)
+                setError('No se pudo conectar con el servidor.');
+            }
+            
+            // --- FIN DE LA MODIFICACIÓN ---
         }
     };
 
