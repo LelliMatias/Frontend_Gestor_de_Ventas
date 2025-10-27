@@ -38,7 +38,7 @@ export function MainLayout() {
                     >
                         <Users className="h-4 w-4" /> Proveedores
                     </NavLink>
-                    
+
                     {/* --- 3. LINK AÑADIDO (El que te faltaba) --- */}
                     <NavLink
                         to="/gestion/ventas"
@@ -46,7 +46,7 @@ export function MainLayout() {
                     >
                         <List className="h-4 w-4" /> Gestión de Ventas
                     </NavLink>
-                    
+
                     {/* --- 4. LINK MODIFICADO (para consistencia) --- */}
                     <NavLink
                         to="/gestion/ventas/nueva"

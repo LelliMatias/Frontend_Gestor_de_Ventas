@@ -1,95 +1,97 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Dialog, DialogTrigger } from '../components/ui/dialog';
+import { LineaFormDialog } from '../components/LineaFormDialog';
+import { Input } from '../components/ui/input'; // <-- Importar Input
 
-// Asumimos que ya tienes estas interfaces definidas
 interface Marca { id: number; nombre: string; }
-interface Linea { id: number; nombre: string; descripcion: string; marca: Marca; }
+interface Linea { id: number; nombre: string; descripcion?: string; marca: Marca; }
 
 export function LineasPage() {
     const [lineas, setLineas] = useState<Linea[]>([]);
-    const [marcas, setMarcas] = useState<Marca[]>([]);
-    const [formData, setFormData] = useState({ nombre: '', descripcion: '', id_marca: '' });
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [lineToEdit, setlineToEdit] = useState<Linea | null>(null);
+    const [searchTerm, setSearchTerm] = useState(''); // <-- Estado para el buscador
 
     const fetchLineas = () => api.get<Linea[]>('/lineas').then(res => setLineas(res.data));
-    const fetchMarcas = () => api.get<Marca[]>('/marcas').then(res => setMarcas(res.data));
 
     useEffect(() => {
         fetchLineas();
-        fetchMarcas();
     }, []);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    // Filtra las líneas por nombre de línea o nombre de marca
+    const filteredLineas = useMemo(() => {
+        if (!searchTerm) {
+            return lineas;
+        }
+        return lineas.filter(linea =>
+            linea.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            linea.marca.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [lineas, searchTerm]);
+
+    const handleSuccess = () => {
+        setIsFormOpen(false);
+        fetchLineas();
     };
 
-    const handleSelectChange = (value: string) => {
-        setFormData(prev => ({ ...prev, id_marca: value }));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await api.post('/lineas', {
-                ...formData,
-                id_marca: parseInt(formData.id_marca),
-            });
-            setFormData({ nombre: '', descripcion: '', id_marca: '' });
-            fetchLineas();
-        } catch (error) {
-            console.error("Error al crear la línea:", error);
+    const handleDelete = async (lineaId: number) => {
+        if (window.confirm("¿Estás seguro de que quieres eliminar esta línea?")) {
+            try {
+                await api.delete(`/lineas/${lineaId}`);
+                fetchLineas();
+            } catch (error: any) {
+                alert(`No se pudo eliminar la línea. Error: ${error.response?.data?.message || 'Conflicto de datos.'}`);
+            }
         }
     };
 
     return (
-        <div className="grid md:grid-cols-2 gap-8">
-            <Card>
-                <CardHeader><CardTitle>Crear Nueva Línea</CardTitle></CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="grid gap-4">
-                        <div className="grid gap-2">
-                            <Label>Marca</Label>
-                            <Select value={formData.id_marca} onValueChange={handleSelectChange} required>
-                                <SelectTrigger><SelectValue placeholder="Selecciona una marca" /></SelectTrigger>
-                                <SelectContent>
-                                    {marcas.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="nombre">Nombre de la Línea</Label>
-                            <Input id="nombre" name="nombre" value={formData.nombre} onChange={handleChange} required />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="descripcion">Descripción (Opcional)</Label>
-                            <Input id="descripcion" name="descripcion" value={formData.descripcion} onChange={handleChange} />
-                        </div>
-                        <Button type="submit">Guardar Línea</Button>
-                    </form>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>Líneas Existentes</CardTitle></CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Nombre</TableHead><TableHead>Marca</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {lineas.map(linea => (
-                                <TableRow key={linea.id}>
-                                    <TableCell>{linea.id}</TableCell>
-                                    <TableCell className="font-medium">{linea.nombre}</TableCell>
-                                    <TableCell>{linea.marca.nombre}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Gestión de Líneas</CardTitle>
+                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                    <DialogTrigger asChild>
+                        <Button onClick={() => setlineToEdit(null)}>Nueva Línea</Button>
+                    </DialogTrigger>
+                    <LineaFormDialog lineaToEdit={lineToEdit} onSuccess={handleSuccess} />
+                </Dialog>
+            </CardHeader>
+            <CardContent>
+                {/* --- BARRA DE BÚSQUEDA AÑADIDA --- */}
+                <div className="mb-4">
+                    <Input
+                        placeholder="Buscar por línea o marca..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="max-w-sm"
+                    />
+                </div>
+                {/* --- FIN DE BARRA DE BÚSQUEDA --- */}
+
+                <Table>
+                    <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Marca</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {filteredLineas.map(linea => ( // <-- Usar la lista filtrada
+                            <TableRow key={linea.id}>
+                                <TableCell className="font-medium">{linea.nombre}</TableCell>
+                                <TableCell>{linea.marca.nombre}</TableCell>
+                                <TableCell className="text-right space-x-2">
+                                    <Button variant="outline" size="sm" onClick={() => { setlineToEdit(linea); setIsFormOpen(true); }}>
+                                        Editar
+                                    </Button>
+                                    <Button variant="destructive" size="sm" onClick={() => handleDelete(linea.id)}>
+                                        Eliminar
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
     );
 }

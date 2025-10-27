@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
 } from "../components/ui/dialog";
-import { Badge } from './ui/badge';
-import { ScrollArea } from './ui/scroll-area';
+import { Badge } from '../components/ui/badge';
+import { ScrollArea } from '../components/ui/scroll-area'
 
 // Interfaces (puedes moverlas a @/types)
 interface Historial {
@@ -46,7 +46,7 @@ export function HistorialVentaDialog({ ventaId, onOpenChange }: Props) {
 
         fetchHistorial();
     }, [ventaId]);
-    
+
     const getBadgeVariant = (accion: Historial['accion']) => {
         switch (accion) {
             case 'CREACION': return 'success';
@@ -64,12 +64,12 @@ export function HistorialVentaDialog({ ventaId, onOpenChange }: Props) {
                     <DialogTitle>Historial de Venta #{ventaId}</DialogTitle>
                     <DialogDescription>Muestra todos los cambios realizados en esta venta.</DialogDescription>
                 </DialogHeader>
-                
+
                 <ScrollArea className="h-[60vh] pr-4">
                     <div className="space-y-6">
                         {isLoading && <p>Cargando historial...</p>}
                         {!isLoading && historial.length === 0 && <p>No hay historial para esta venta.</p>}
-                        
+
                         {historial.map((h) => (
                             <div key={h.id} className="p-4 border rounded-lg">
                                 <div className="flex justify-between items-center mb-2">
@@ -79,7 +79,7 @@ export function HistorialVentaDialog({ ventaId, onOpenChange }: Props) {
                                     </span>
                                 </div>
                                 {h.motivo && <p className="text-sm italic text-muted-foreground mb-2">Motivo: "{h.motivo}"</p>}
-                                
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <h4 className="font-semibold text-sm mb-1">Datos Anteriores</h4>

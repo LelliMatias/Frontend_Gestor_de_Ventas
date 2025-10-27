@@ -8,8 +8,6 @@ import { MainLayout } from './layouts/MainLayout';
 import { VentaFormPage } from './pages/VentaFormPage';
 import { ProveedoresPage } from './pages/ProveedoresPage';
 import { ProductPage } from './pages/ProductPage';
-
-// --- 1. IMPORTA LAS PÁGINAS QUE FALTABAN ---
 import { VentaListPage } from './pages/VentaListPage';
 import { VentaEditPage } from './pages/VentaEditPage';
 
@@ -29,16 +27,16 @@ function App() {
         <Route path="productos" element={<ProductPage />} />
 
         {/* --- 2. RUTAS DEL APARTADO DE VENTAS --- */}
-        
+
         {/* a. La página de LISTA (la que querías ver) */}
         <Route path="ventas" element={<VentaListPage />} />
-        
+
         {/* b. La página de CREAR (la que ya tenías) */}
         <Route path="ventas/nueva" element={<VentaFormPage />} />
-        
+
         {/* c. La página de EDITAR (la que usa un ID) */}
         <Route path="ventas/editar/:id" element={<VentaEditPage />} />
-        
+
         {/* -------------------------------------- */}
 
         <Route path="*" element={<div>Página no encontrada</div>} />
