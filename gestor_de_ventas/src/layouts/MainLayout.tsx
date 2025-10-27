@@ -1,10 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
-// --- CORRECCIÓN: Usar la ruta de alias '@/' ---
 import { cn } from '../lib/utils';
-// --- 1. Importa el Toaster ---
-import { Toaster } from "../components/ui/toaster"; // Ajusta la ruta si es necesario
-// --- 2. Importa los iconos ---
-import { Tag, Network, Package, Users, List, PlusCircle } from 'lucide-react';
+import { Toaster } from "../components/ui/toaster";
+import { Tag, Network, Package, Users, List, PlusCircle, AreaChart } from 'lucide-react';
 
 export function MainLayout() {
     const activeLinkClass = "bg-primary text-primary-foreground";
@@ -53,6 +50,12 @@ export function MainLayout() {
                         className={({ isActive }) => cn(linkClasses, isActive && activeLinkClass)}
                     >
                         <PlusCircle className="h-4 w-4" /> Nueva Venta
+                    </NavLink>
+                    <NavLink
+                        to="/gestion/reportes"
+                        className={({ isActive }) => cn(linkClasses, isActive && activeLinkClass)}
+                    >
+                        <AreaChart className="h-4 w-4" /> Reportes
                     </NavLink>
                 </nav>
             </header>
