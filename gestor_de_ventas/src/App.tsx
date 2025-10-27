@@ -11,6 +11,7 @@ import { ProductPage } from './pages/ProductPage';
 import { VentaListPage } from './pages/VentaListPage';
 import { VentaEditPage } from './pages/VentaEditPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -18,16 +19,18 @@ function App() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/gestion" element={<MainLayout />}>
-        <Route path="marcas" element={<MarcasPage />} />
-        <Route path="lineas" element={<LineasPage />} />
-        <Route path="proveedores" element={<ProveedoresPage />} />
-        <Route path="productos" element={<ProductPage />} />
-        <Route path="ventas" element={<VentaListPage />} />
-        <Route path="ventas/nueva" element={<VentaFormPage />} />
-        <Route path="ventas/editar/:id" element={<VentaEditPage />} />
-        <Route path="reportes" element={<DashboardPage />} />
-        <Route path="*" element={<div>Página no encontrada</div>} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/gestion" element={<MainLayout />}>
+          <Route path="marcas" element={<MarcasPage />} />
+          <Route path="lineas" element={<LineasPage />} />
+          <Route path="proveedores" element={<ProveedoresPage />} />
+          <Route path="productos" element={<ProductPage />} />
+          <Route path="ventas" element={<VentaListPage />} />
+          <Route path="ventas/nueva" element={<VentaFormPage />} />
+          <Route path="ventas/editar/:id" element={<VentaEditPage />} />
+          <Route path="reportes" element={<DashboardPage />} />
+          <Route path="*" element={<div>Página no encontrada</div>} />
+        </Route>
       </Route>
     </Routes>
   );

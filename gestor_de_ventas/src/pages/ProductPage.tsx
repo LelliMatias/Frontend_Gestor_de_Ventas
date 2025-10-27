@@ -6,10 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog } from '../components/ui/dialog';
 import { ProductFormDialog } from '../components/ProductFormDialog';
 import { ProductProvidersDialog } from '../components/ProductProvidersDialog';
-import useAuthStore from '../store/authStore';
+import { Card, CardContent, CardHeader } from '../components/ui/card'; // Importar CardDescription
+import { PlusCircle } from 'lucide-react'; // Importar el ícono
 
 // --- INTERFAZ UNIFICADA ---
-// Esta es la definición oficial de Producto que usaremos en toda la app.
 export interface Product {
     id: number;
     nombre: string;
@@ -32,10 +32,9 @@ export function ProductPage() {
         api.get<Product[]>('/productos').then(res => setProducts(res.data));
     };
 
-    const user = useAuthStore((state) => state.user);
-    const isAdmin = user?.rol === 'ADMIN';
-
-    useEffect(fetchProducts, []);
+    useEffect(() => {
+        fetchProducts();
+    }, []);
 
     const filteredProducts = useMemo(() => {
         return products.filter(p =>
@@ -44,7 +43,6 @@ export function ProductPage() {
         );
     }, [products, searchTerm]);
 
-    // Callback para cerrar diálogos y refrescar la lista
     const handleSuccess = () => {
         fetchProducts();
         setIsFormOpen(false);
@@ -53,60 +51,59 @@ export function ProductPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 md:p-8">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold">Product Management</h1>
-                {isAdmin && (
-                    <>
-                        <Button onClick={() => { setSelectedProduct(null); setIsFormOpen(true); }}>
-                            New Product
-                        </Button>
-                    </>
-                )}
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Gestión de Productos</h1>
+                    <p className="text-muted-foreground">Busca, crea y gestiona todos los productos de tu inventario.</p>
+                </div>
+                <Button onClick={() => { setSelectedProduct(null); setIsFormOpen(true); }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Nuevo Producto
+                </Button>
             </div>
 
-            <Input
-                placeholder="Search by name or brand..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="max-w-sm mb-4"
-            />
-
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Brand</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead>Stock</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredProducts.map(product => (
-                            <TableRow key={product.id}>
-                                <TableCell className="font-medium">{product.nombre}</TableCell>
-                                <TableCell>{product.marca.nombre}</TableCell>
-                                <TableCell>${product.precioUnitario}</TableCell>
-                                <TableCell>{product.stockActual}</TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    {isAdmin && (
-                                        <>
-                                            <Button variant="outline" size="sm" onClick={() => { setSelectedProduct(product); setIsFormOpen(true); }}>
-                                                Edit
-                                            </Button>
-                                            <Button variant="secondary" size="sm" onClick={() => { setSelectedProduct(product); setIsProvidersOpen(true); }}>
-                                                Providers
-                                            </Button>
-                                        </>
-                                    )}
-                                </TableCell>
+            <Card>
+                <CardHeader>
+                    <Input
+                        placeholder="Buscar por nombre o marca..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="max-w-sm"
+                    />
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nombre</TableHead>
+                                <TableHead>Marca</TableHead>
+                                <TableHead>Precio</TableHead>
+                                <TableHead>Stock</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredProducts.map(product => (
+                                <TableRow key={product.id}>
+                                    <TableCell className="font-medium">{product.nombre}</TableCell>
+                                    <TableCell>{product.marca.nombre}</TableCell>
+                                    <TableCell>${product.precioUnitario}</TableCell>
+                                    <TableCell>{product.stockActual}</TableCell>
+                                    <TableCell className="text-right space-x-2">
+                                        <Button variant="outline" size="sm" onClick={() => { setSelectedProduct(product); setIsFormOpen(true); }}>
+                                            Editar
+                                        </Button>
+                                        <Button variant="secondary" size="sm" onClick={() => { setSelectedProduct(product); setIsProvidersOpen(true); }}>
+                                            Proveedores
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
 
             {/* Diálogo para Crear/Editar Producto */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
