@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog } from '../components/ui/dialog';
 import { ProductFormDialog } from '../components/ProductFormDialog';
 import { ProductProvidersDialog } from '../components/ProductProvidersDialog';
+import useAuthStore from '../store/authStore';
 
 // --- INTERFAZ UNIFICADA ---
 // Esta es la definición oficial de Producto que usaremos en toda la app.
@@ -31,6 +32,9 @@ export function ProductPage() {
         api.get<Product[]>('/productos').then(res => setProducts(res.data));
     };
 
+    const user = useAuthStore((state) => state.user);
+    const isAdmin = user?.rol === 'ADMIN';
+
     useEffect(fetchProducts, []);
 
     const filteredProducts = useMemo(() => {
@@ -52,9 +56,13 @@ export function ProductPage() {
         <div className="p-4 sm:p-6 md:p-8">
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-bold">Product Management</h1>
-                <Button onClick={() => { setSelectedProduct(null); setIsFormOpen(true); }}>
-                    New Product
-                </Button>
+                {isAdmin && (
+                    <>
+                        <Button onClick={() => { setSelectedProduct(null); setIsFormOpen(true); }}>
+                            New Product
+                        </Button>
+                    </>
+                )}
             </div>
 
             <Input
@@ -83,12 +91,16 @@ export function ProductPage() {
                                 <TableCell>${product.precioUnitario}</TableCell>
                                 <TableCell>{product.stockActual}</TableCell>
                                 <TableCell className="text-right space-x-2">
-                                    <Button variant="outline" size="sm" onClick={() => { setSelectedProduct(product); setIsFormOpen(true); }}>
-                                        Edit
-                                    </Button>
-                                    <Button variant="secondary" size="sm" onClick={() => { setSelectedProduct(product); setIsProvidersOpen(true); }}>
-                                        Providers
-                                    </Button>
+                                    {isAdmin && (
+                                        <>
+                                            <Button variant="outline" size="sm" onClick={() => { setSelectedProduct(product); setIsFormOpen(true); }}>
+                                                Edit
+                                            </Button>
+                                            <Button variant="secondary" size="sm" onClick={() => { setSelectedProduct(product); setIsProvidersOpen(true); }}>
+                                                Providers
+                                            </Button>
+                                        </>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ))}
